@@ -92,21 +92,25 @@ void setup() {
 }
 
 void loop() {
-  //put your main code here, to run repeatedly:
-
-  if (mode == 0){
-    pieceDetected = checkRaspPi();
-    if (pieceDetected){
-      delay(1000);
-      zone = checkRaspPi();
-      ConveyorStop();
-      mode == 1;
-      needsSetup = true;
-    }
-    else{
-      ConveyorRun();
-    }
-  }
+//put your main code here, to run repeatedly:
+ 
+// ****************************
+// *** Remy's Image Capture ***
+// ****************************
+ 
+//   if (mode == 0){
+//     pieceDetected = checkRaspPi();
+//     if (pieceDetected){
+//       delay(1000);
+//       zone = checkRaspPi();
+//       ConveyorStop();
+//       mode == 1;
+//       needsSetup = true;
+//     }
+//     else{
+//       ConveyorRun();
+//     }
+//   }
 
   if (mode == 1){
     if (needsSetup){
