@@ -45,13 +45,14 @@ unsigned long t0;            // time at start of path
 unsigned long t;             // current time
 unsigned long dt;            // time between updates
 unsigned long tRamp = 100;   // time to stop velocity before tExp to allow motor to slow down
-
+unsigned long convt0;
+unsigned long convt;
 int sgn;              // direction of travel to reach goal th based on feedforward control
 int diffSgn;          // direction of travel when feedback is added in
 float velCom;         // desired rpm commanded to motor driver
 int intVel;           // converted rpm value to (0-255) integer value to command to motor driver
 int ctr = 0;
-
+bool waiting = true;
 // create instance of encoder library
 Encoder rotEnc(rotEnc1, rotEnc2);
 
@@ -68,6 +69,7 @@ Stepper myStepper(stepsPerRevolution, 24,25,26,27);
 int mode = 0;
 bool needsSetup = true;
 bool isDone;
+bool started = false;
 
 void setup() {
   // set pin modes and make sure motor is shut off
@@ -92,82 +94,106 @@ void setup() {
 }
 
 void loop() {
-//put your main code here, to run repeatedly:
- 
-// ****************************
-// *** Remy's Image Capture ***
-// ****************************
- 
-//   if (mode == 0){
-//     pieceDetected = checkRaspPi();
-//     if (pieceDetected){
-//       delay(1000);
-//       zone = checkRaspPi();
-//       ConveyorStop();
-//       mode == 1;
-//       needsSetup = true;
-//     }
-//     else{
-//       ConveyorRun();
-//     }
-//   }
-  if (mode == 0){
-    conveyorRun();
-    delay(2000);
-    conveyorStop();
-    mode = 1;
-  }
-
-  else if (mode == 1){
-    if (needsSetup){
-      thBound = 2;
-      setUpTransportation(zone);
-      needsSetup = false;
-      delay(5);
+  //put your main code here, to run repeatedly:
+  if (!started){
+    if (Serial.available()){
+      if (Serial.read() == "start"){
+        started = true;
+      }
     }
-    isDone = runTransportation();
-    if (isDone){
-      mode = 2;
-    }
-    else{
-      delay(5);
-    }
+    delay(5);
   }
-
-  else if (mode == 2){
-    pushPiece();
-    needsSetup = true;
-    mode = 3;
-  }
-
   else{
-    if (needsSetup){
-      thBound = .45;
-      setUpTransportation(-1);
-      needsSetup = false;
-      delay(5);
-    }
-    isDone = runTransportation();
-    if (isDone){
-      if (zone != 5){
+    // if we're running the conveyor code
+    if (mode == 0){
+      // if we receive a message, set up timing, ends waiting for zone, reads zone
+      if (Serial.available() > 0){
+        convt0 = millis();
+        waiting = false;
+        zone = Serial.read();
+      }
+      // if we're not waiting and it's been two seconds
+      else if ((!waiting) && ((millis() - t0) > 2000)){
+        // stop conveyor, switch mode
+        conveyorStop();
         mode = 1;
-        zone = zone + 1;
         needsSetup = true;
-        delay(2000);
-      }  
+      }
+      // run the conveyor otherwise
       else{
-        exit(0);
+        conveyorRun();
+        delay(5);
+      }
+    }
+  
+    else if (mode == 1){
+      if (needsSetup){
+        thBound = 2;
+        setUpTransportation(zone);
+        needsSetup = false;
+        delay(5);
+      }
+      isDone = runTransportation();
+      if (isDone){
+        mode = 2;
+      }
+      else{
+        delay(5);
+      }
+    }
+  
+    else if (mode == 2){
+      pushPiece();
+      needsSetup = true;
+      mode = 3;
+    }
+  
+    else if (mode == 3){
+      if (needsSetup){
+        thBound = .45;
+        setUpTransportation(-1);
+        needsSetup = false;
+        delay(5);
+      }
+      isDone = runTransportation();
+      if (isDone){
+        if (zone != 5){
+          mode = 4;
+          zone = zone + 1;
+          needsSetup = true;
+          delay(2000);
+        }  
+        else{
+          exit(0);
+        }
+      }
+      else{
+        //Serial.print(intVel);
+        //Serial.print(" ");
+        //Serial.print(thTrav);
+        //Serial.print("\n");
+        delay(5);
       }
     }
     else{
-      Serial.print(intVel);
-      Serial.print(" ");
-      Serial.print(thTrav);
-      Serial.print("\n");
-      delay(5);
+      if (needsSetup){
+        convt0 = millis();
+        convt = 0;
+        needsSetup = false;
+      }
+      convt = millis() - t0;
+      if (convt > 3000){
+        conveyorStop();
+        mode = 0;
+        needsSetup = true;
+        waiting = true;
+        Serial.print('F');
+      }
+      else{
+        conveyorReverse();
+      }
     }
   }
-  
 }
 
 void conveyorStop() {
@@ -327,22 +353,22 @@ void motorSet(int volCom, int sgn){
 // maps a zone to a theta value
 float mapZoneToTh(int zone){
   float th;
-  if ((zone == -1) || (zone == 0)){
+  if ((zone == -1) || (zone == 1)){
     th = 0;
   }
-  else if (zone == 1){
+  else if (zone == 0){
     th = 60;
   }
-  else if (zone == 2){
+  else if (zone == 3){
     th = 120;
   }
-  else if (zone == 3){
+  else if (zone == 5){
     th = 180;
   }
-  else if (zone == 4){
+  else if (zone == 2){
     th = -60;
   }
-  else if (zone == 5){
+  else if (zone == 4){
     th = -120;
   }
   return th;
