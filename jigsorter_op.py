@@ -1,5 +1,7 @@
 
 
+
+
 '''
     The following code is for a puzzle sorting system for the Electromechanical
     systems design course (24-671) at Carnegie Mellon University. The code below
@@ -55,6 +57,7 @@ while True:
             
             # Display running screen
             runningScreen(0)
+            ArduinoComm("start")
             
             # Begin running machine
             runMachine(select)
