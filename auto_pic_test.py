@@ -1,5 +1,6 @@
 
 
+
 '''
 Object detection with OpenCV
     Adapted from the original code developed by Adrian Rosebrock
@@ -25,8 +26,8 @@ import Piece_ID_pixy
 from Piece_ID_pixy import *
 import run_screen
 from run_screen import *
-import pi_ard_comm_test
-from pi_ard_comm_test import *
+import serial
+import time
 
 def runMachine(sortMethod):
     # construct the argument parse and parse the arguments
@@ -45,6 +46,18 @@ def runMachine(sortMethod):
     pts = deque(maxlen=args["buffer"])
     imageCaptured = 0
     piecesIdentified = 0
+    
+    binNum = 0
+    
+    numGreen = 0
+    numBlue = 0
+    numRed = 0
+    numWhite = 0
+    numBlack = 0
+    
+    numMid = 0
+    numEdge = 0
+    numCorn = 0
      
     # if a video path was not supplied, grab the reference
     # to the webcam
@@ -128,11 +141,13 @@ def runMachine(sortMethod):
                 crop_frame = frame[up:down, left:right]
             except:
                 crop_frame = frame
+                
+            print(center)
             
             # Once the piece is in the center of the frame, we will send its captured image
             # to the piece I.D. algorithms. We also mark that the piece has been recorded, awaiting
             # for it to exit a given range before searching/accepting the next piece
-            if center[0] <= 310 and center[0] >= 290 and not imageCaptured:
+            if center[0] <= 310 and center[0] >= 290 and center[1] < 400 and not imageCaptured:
                 imageCaptured = 1
                 
                 # Classify puzzle piece and send to Arduino. Message to arduino is condensed into a string
@@ -144,15 +159,48 @@ def runMachine(sortMethod):
                     piecesIdentified += 1
                     print(colorPerc)
                     
+                    if (maxIndex == 0):
+                        numGreen += 1
+                        binNum = 0
+                    elif (maxIndex == 1):
+                        numRed += 1
+                        binNum = 1
+                    elif(maxIndex == 2):
+                        numBlue += 1
+                        binNum = 2
+                    elif(maxIndex == 3):
+                        numWhite += 1
+                        binNum = 3
+                        
+                    
                     # Send I.D. classification to Arduino for sorting
-                    ArduinoComm((sortMethod, maxIndex))
+                    ArduinoComm(binNum)
+                    time.sleep(10)
                 else:
                     pieceType = pieceID(crop_frame)
                     piecesIdentified += 1
                     print(pieceType)
                     
+                    if(pieceType == 0):
+                        numMid += 1
+                        binNum = 1
+                        
+                        if(numMid > 100 and numMid < 200):
+                            binNum = 2
+                        elif(numMid > 200 and numMid < 300):
+                            binNum = 3
+                        elif(numMid > 300 and numMid < 400):
+                            binNum = 4
+                    
+                    elif(pieceType == 1):
+                        numEdge += 1
+                        binNum = 0
+                    else:
+                        binNum = 5
+                    
                     # Send I.D. classification to Arduino for sorting
-                    ArduinoComm((sortMethod, pieceType))
+                    ArduinoComm(binNum)
+                    time.sleep(10)
                 
                 # Might need to add a feature to wait for a response from the Arduino telling this system
                 # that the puzzle piece has been finished storing so that it can accept a new input. Or just
@@ -200,3 +248,32 @@ def runMachine(sortMethod):
     # cleanup the camera and close any open windows
     camera.release()
     cv2.destroyAllWindows()
+    
+def ArduinoComm(message):
+    print(__name__)
+    if __name__ == 'auto_pic_test':
+        ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+        ser.reset_input_buffer()
+        
+        waiting = True
+        #print(message)
+        
+        if type(message) != str:
+            message = str(message)
+        
+        # Convert values in array to a single string
+
+        # This will have to be thoroughly tested
+        while waiting:
+            # Convert string to bytes and write to Arduino serial
+            ser.write(bytes(message, 'utf-8'))
+            
+            # Undo commenting below for debugging
+            line = ser.readline().decode('utf-8').rstrip()
+            print(line)
+            # Arduino should send a 1 if it successfully reads the command
+            if line == 'F' or line == 'accepted':
+                waiting = False
+                
+            print(line)
+            #time.sleep(1)
