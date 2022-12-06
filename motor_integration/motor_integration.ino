@@ -82,7 +82,7 @@ void setup() {
   digitalWrite(rot2, LOW);
   digitalWrite(stepEn1, LOW);
   digitalWrite(stepEn2, LOW);
-  Serial.begin(115200);
+  Serial.begin(9600);
   
   // Conveyor
   pinMode(conv1, OUTPUT);
@@ -96,10 +96,9 @@ void setup() {
 void loop() {
   //put your main code here, to run repeatedly:
   if (!started){
-    if (Serial.available()){
-      if (Serial.read() == "start"){
-        started = true;
-      }
+    if (Serial.available() > 0){
+      Serial.println("F");
+      started = true;
     }
     delay(5);
   }
@@ -112,9 +111,11 @@ void loop() {
         waiting = false;
         zone = Serial.read();
       }
-      // if we're not waiting and it's been two seconds
-      else if ((!waiting) && ((millis() - t0) > 2000)){
+      // if we're not waiting and it's been 3.9 seconds
+      else if ((!waiting) && ((millis() - convt0) > 3900)){
         // stop conveyor, switch mode
+        conveyorReverse();
+        delay(4000);
         conveyorStop();
         mode = 1;
         needsSetup = true;
@@ -157,15 +158,9 @@ void loop() {
       }
       isDone = runTransportation();
       if (isDone){
-        if (zone != 5){
-          mode = 4;
-          zone = zone + 1;
-          needsSetup = true;
-          delay(2000);
-        }  
-        else{
-          exit(0);
-        }
+        mode = 4;
+        needsSetup = true;
+        delay(2000);
       }
       else{
         //Serial.print(intVel);
@@ -189,9 +184,10 @@ void loop() {
         waiting = true;
         Serial.print('F');
       }
-      else{
-        conveyorReverse();
-      }
+      // else{
+      //   conveyorReverse();
+      //   delay(1000);
+      // }
     }
   }
 }
@@ -353,10 +349,10 @@ void motorSet(int volCom, int sgn){
 // maps a zone to a theta value
 float mapZoneToTh(int zone){
   float th;
-  if ((zone == -1) || (zone == 1)){
+  if ((zone == -1) || (zone == 0)){
     th = 0;
   }
-  else if (zone == 0){
+  else if (zone == 1){
     th = 60;
   }
   else if (zone == 3){
