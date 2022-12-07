@@ -183,18 +183,18 @@ def runMachine(sortMethod):
                     
                     if(pieceType == 0):
                         numMid += 1
-                        binNum = 1
+                        binNum = 0
                         
                         if(numMid > 100 and numMid < 200):
-                            binNum = 2
+                            binNum = 1
                         elif(numMid > 200 and numMid < 300):
-                            binNum = 3
+                            binNum = 2
                         elif(numMid > 300 and numMid < 400):
-                            binNum = 4
+                            binNum = 5
                     
                     elif(pieceType == 1):
                         numEdge += 1
-                        binNum = 0
+                        binNum = 4
                     else:
                         binNum = 5
                     

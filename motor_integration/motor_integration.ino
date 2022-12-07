@@ -29,7 +29,7 @@ int encReading;  // current encoder reading
 int newEnc;      // previous encoder reading
  
 // what constant speed are we commanding
-float rpmRef = 25;
+float rpmRef = 20;
 
 // th variables
 float thTrav = 0;    // current angle to system is at from home
@@ -151,7 +151,7 @@ void loop() {
   
     else if (mode == 3){
       if (needsSetup){
-        thBound = .45;
+        thBound = .67;
         setUpTransportation(-1);
         needsSetup = false;
         delay(5);
@@ -218,11 +218,17 @@ void setUpTransportation(int zone){
   tPrev = t0;
   encReading = rotEnc.read();
   th = mapZoneToTh(zone);
+  thTrav = ((float(encReading))*360) / (34.014 * 48);
   timeExp = ceil(((abs(th-thTrav)/360.0)/rpmRef)*60000);
   thStart = thTrav;
-  sgn = 1;
-  if ((zone > 3) || (zone == -1)){
+  if ((zone > 3)){
+    sgn = -1;
+  }
+  else if (zone == -1){
     sgn = -1*sgn;
+  }
+  else{
+    sgn = 1;
   }
 }
 
@@ -267,17 +273,18 @@ bool runTransportation(){
 float findRpm(float thStart, float thGoal, int sgn, float thTrav, unsigned long t, unsigned long dt, float dTh){
   // feedforward velocity is reference velocity, k is proportional constant for control
   float rpmFF = rpmRef;
-  float k = .1;
+  float k = .08;
+  bool reached = false;
   
   // calculate the expected angle at this time based on feedforward signal
   float thExp = thStart + ((float(t))/60000.0)*((sgn*rpmRef*360.0));
-
+  
   // if we should have reached the goal angle, ff velocity is 0, thExp is goal theta
-  if (((sgn > 0) && (thExp >= thGoal)) || ((sgn < 0) && (thExp <= thGoal))){
+  if (t > timeExp){
       rpmFF = 0;
       thExp = thGoal;
       // set sgn=0 to signal that we've reached the goal theta
-      sgn = 0;
+      reached = true;
   }
 
   // calculate the control angular velocity, and convert it to rpm
@@ -285,12 +292,15 @@ float findRpm(float thStart, float thGoal, int sgn, float thTrav, unsigned long 
   float rpmCont = wCont*(60.0/360.0);
 
   // check if we've reached the goal theta and set the control velocity = 0
-  if (sgn == 0){
+  if (reached){
     if (((fabs(th - thTrav) < thBound)&&(fabs(dTh) == 0))){
       ctr = ctr + 1;
       if (ctr == 3){
         rpmCont = 0;
       }
+    }
+    else{
+      ctr = 0;
     }
   }
 
@@ -310,8 +320,8 @@ int motorCmmd(float rpm){
   float volCom = (rpm + 26.906)/.5673;
   
   // limits the maximum speed
-  if (volCom > 200){
-      return 200;
+  if (volCom > 100){
+      return 100;
   }
   // if rpm is zero, let it be zero (best fit line doesn't start at 0)
   else if (rpm == 0.0){
@@ -355,16 +365,16 @@ float mapZoneToTh(int zone){
   else if (zone == 1){
     th = 60;
   }
-  else if (zone == 3){
+  else if (zone == 2){
     th = 120;
   }
-  else if (zone == 5){
+  else if (zone == 3){
     th = 180;
   }
-  else if (zone == 2){
+  else if (zone == 4){
     th = -60;
   }
-  else if (zone == 4){
+  else if (zone == 5){
     th = -120;
   }
   return th;
