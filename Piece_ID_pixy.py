@@ -1,17 +1,8 @@
 
 
-'''
-    The following code is for a puzzle sorting system for the Electromechanical
-    systems design course (24-671) at Carnegie Mellon University. The code below
-    is responsible for identifying and classifying the puzzle pieces by their
-    shape. The possible sorting groups are as follows: Middle, Edge, and Corner.
-    
-    Author: Remington Frank
-'''
-
 import cv2
 import numpy as np
-#from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 import itertools
 import math
 import time
@@ -20,6 +11,10 @@ def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
 
+def getSignAngle(a, b, c):
+    ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
+    return 1 if ang < 0 else -1
+    
 def findCorners(combos):
     dist_one = 0
     dist_two = 0
@@ -65,13 +60,13 @@ def findCorners(combos):
     
     return rect
 
-def pieceID(give_image):
+def processImage(give_image):
     # Open image
-    img = give_image
+    img = cv2.imread(give_image)
 
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img_gray = cv2.medianBlur(img_gray, ksize=5)
-    thresh = cv2.threshold(img_gray, 30, 255, cv2.THRESH_BINARY)[1]
+    thresh = cv2.threshold(img_gray, 40, 255, cv2.THRESH_BINARY)[1]
     #thresh = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
             #cv2.THRESH_BINARY, 11, 2)
     thresh = cv2.blur(thresh, ksize=(3, 3))
@@ -93,9 +88,7 @@ def pieceID(give_image):
             if crn[x, y] > 10:
                 cv2.circle(cornershow, (y, x), 1, (255,0,25))
                 cands.append((y, x))
-    
-    #cv2.imshow("Frame3", cornershow)
-    #key = cv2.waitKey(1) & 0xFF
+
 
     keep = []
     keep.append(cands[0])
@@ -155,9 +148,115 @@ def pieceID(give_image):
     for point in rect:
         cv2.circle(edges, point, 4, (255,0,0))
 
-    #plt.subplot(1, 1, 1)
-    #plt.imshow(edges)
-    #plt.show()
+    plt.subplot(1, 1, 1)
+    plt.imshow(edges)
+    plt.show()
+
+    # Rotate the image for identification to work
+    baseLine = (rect[0][0]+50, rect[0][1])
+    rotateAngle = getAngle(rect[3], rect[0], baseLine)
+    sign = getSignAngle(rect[3], rect[0], baseLine)
+
+    if(rotateAngle > 180): rotateAngle = 360 - rotateAngle
+
+    M = cv2.getRotationMatrix2D((h // 2, w // 2), rotateAngle*sign, 1.0)
+    rotated = cv2.warpAffine(img, M, (h, w))
+
+    print(rotateAngle)
+
+    return pieceID(rotated)
+
+def pieceID(give_image):
+    # Open image
+    img = give_image
+
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img_gray = cv2.medianBlur(img_gray, ksize=5)
+    thresh = cv2.threshold(img_gray, 40, 255, cv2.THRESH_BINARY)[1]
+    #thresh = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
+            #cv2.THRESH_BINARY, 11, 2)
+    thresh = cv2.blur(thresh, ksize=(3, 3))
+
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    crn = cv2.cornerHarris(thresh, 7, 7, 0.03)
+    crn = cv2.dilate(crn, None)
+
+    #crn = cv2.convertScaleAbs( crn )
+    cornershow = crn.copy()
+    refineshow = crn.copy()
+    pointshow = crn.copy()
+
+    w, h = thresh.shape
+    cands = []
+    for y in range(0, h):
+        for x in range(0, w):
+            if crn[x, y] > 10:
+                cv2.circle(cornershow, (y, x), 1, (255,0,25))
+                cands.append((y, x))
+
+
+    keep = []
+    keep.append(cands[0])
+    strength = 0
+    dist = 0
+
+    for val in cands:
+        for point in keep:
+            dist = ((val[0] - point[0])**2 + (val[1] - point[1])**2)**(1/2)
+
+            if(dist > 15):
+                strength += 1
+
+        if(strength == len(keep)):
+            keep.append(val)
+
+        strength = 0
+
+    max_height = 0;
+    min_height = keep[0][1];
+
+    for kept in keep:
+        if(kept[1] > max_height):
+            max_height = kept[1]
+        if(kept[1] < min_height):
+            min_height = kept[1]
+
+    # Todo: Ensure that male connections are not erased. Only get rid of points
+    # in true middle of piece. Then get the combinations of these points, only
+    # including 4 at a time. Create a function that takes in this list, evaluates
+    # the area created by the points, as well as the angularity. Return the set of
+    # four points with the best rectangularity. Continue to edge detection
+
+    simp = []
+    for pnt in keep:
+        cv2.circle(pointshow, pnt, 1, (255,0,25))
+        if(pnt[1] < 0.90*max_height and pnt[1] > 1.15*min_height):
+            pass
+        else:
+            simp.append(pnt)
+
+
+    for pt in simp:
+        cv2.circle(refineshow, pt, 4, (255,0,0))
+
+    coms = list(itertools.permutations(keep, 4))
+    coms2 = []
+
+    for sets in coms:
+        if sets[0][0] < sets[2][0] and sets[0][0] < sets[3][0] and sets[1][0] < sets[2][0] and sets[1][0] < sets[3][0]:
+            if sets[0][1] < sets[1][1] and sets[0][1] < sets[2][1] and sets[3][1] < sets[1][1] and sets[3][1] < sets[2][1]:
+                coms2.append(sets)
+
+    rect = findCorners(coms2)
+
+    edges = cv2.Canny(thresh, 100, 200)
+    for point in rect:
+        cv2.circle(edges, point, 4, (255,0,0))
+
+    plt.subplot(1, 1, 1)
+    plt.imshow(edges)
+    plt.show()
 
     # Need to sort through all "corners" detected
     # We know corner points
@@ -338,5 +437,3 @@ def main():
     print("Trial 2 -")
     print(f'Percent Correct: {percCorr * 100}')
     print(f'Time Elapsed: {end - start}')
-    #print(pTypes2)
-    
