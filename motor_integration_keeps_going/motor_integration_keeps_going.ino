@@ -66,10 +66,10 @@ const int pushSteps = 100;
 Stepper myStepper(stepsPerRevolution, 24,25,26,27);
 
 // modes: 0, rotating conveyor motor / 1, rotating ring / 2, pushing / 3, reversing ring
-int mode = 0;
+int mode = 1;
 bool needsSetup = true;
 bool isDone;
-bool started = false;
+bool started = true;
 
 void setup() {
   // set pin modes and make sure motor is shut off
@@ -82,7 +82,7 @@ void setup() {
   digitalWrite(rot2, LOW);
   digitalWrite(stepEn1, LOW);
   digitalWrite(stepEn2, LOW);
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   // Conveyor
   pinMode(conv1, OUTPUT);
@@ -94,7 +94,6 @@ void setup() {
 }
 
 void loop() {
-  //Serial.print(intVel);
   //put your main code here, to run repeatedly:
   if (!started){
     if (Serial.available() > 0){
@@ -159,7 +158,12 @@ void loop() {
       }
       isDone = runTransportation();
       if (isDone){
-        mode = 4;
+        //mode = 4;
+        mode = 1;
+        zone = zone + 1;
+        if (zone == 6){
+          zone = 0;
+        }
         needsSetup = true;
         delay(2000);
       }
