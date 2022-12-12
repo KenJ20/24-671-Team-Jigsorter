@@ -128,8 +128,8 @@ void loop() {
     }
   
     else if (mode == 1){
-      if (needsSetup){
-        thBound = 2;
+      if (needsSetup){0
+        thBound = 5;
         setUpTransportation(zone);
         needsSetup = false;
         delay(5);
@@ -226,7 +226,7 @@ void setUpTransportation(int zone){
   thTrav = ((float(encReading))*360) / (34.014 * 48);
   timeExp = ceil(((abs(th-thTrav)/360.0)/rpmRef)*60000);
   thStart = thTrav;
-  if ((zone > 3)){
+  if ((zone > 2)){
     sgn = -1;
   }
   else if (zone == -1){
@@ -364,23 +364,26 @@ void motorSet(int volCom, int sgn){
 // maps a zone to a theta value
 float mapZoneToTh(int zone){
   float th;
-  if ((zone == -1) || (zone == 0)){
+  if (zone == -1){
     th = 0;
   }
+  else if (zone == 0){
+    th = 30;
+  }
   else if (zone == 1){
-    th = 60;
+    th = 80;
   }
   else if (zone == 2){
-    th = 120;
+    th = 150;
   }
   else if (zone == 3){
-    th = 180;
+    th = -150;
   }
   else if (zone == 4){
-    th = -60;
+    th = -30;
   }
   else if (zone == 5){
-    th = -120;
+    th = -100;
   }
   return th;
 }

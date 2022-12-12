@@ -130,7 +130,7 @@ void loop() {
   
     else if (mode == 1){
       if (needsSetup){
-        thBound = 2;
+        thBound = 5;
         setUpTransportation(zone);
         needsSetup = false;
         delay(5);
@@ -164,10 +164,6 @@ void loop() {
         delay(2000);
       }
       else{
-        //Serial.print(intVel);
-        //Serial.print(" ");
-        //Serial.print(thTrav);
-        //Serial.print("\n");
         delay(5);
       }
     }
@@ -183,12 +179,8 @@ void loop() {
         mode = 0;
         needsSetup = true;
         waiting = true;
-        Serial.print('F');
+        Serial.println('F');
       }
-      // else{
-      //   conveyorReverse();
-      //   delay(1000);
-      // }
     }
   }
 }
@@ -360,23 +352,26 @@ void motorSet(int volCom, int sgn){
 // maps a zone to a theta value
 float mapZoneToTh(int zone){
   float th;
-  if ((zone == -1) || (zone == 0)){
+  if (zone == -1){
     th = 0;
   }
+  else if (zone == 0){
+    th = 30;
+  }
   else if (zone == 1){
-    th = 60;
+    th = 80;
   }
   else if (zone == 2){
-    th = 120;
+    th = 150;
   }
   else if (zone == 3){
-    th = 180;
+    th = -150;
   }
   else if (zone == 4){
-    th = -60;
+    th = -30;
   }
   else if (zone == 5){
-    th = -120;
+    th = -100;
   }
   return th;
 }
