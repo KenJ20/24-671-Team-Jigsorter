@@ -20,12 +20,12 @@ import numpy as np
 import argparse
 import imutils
 import cv2
-import Piece_ID_color_v1
-from Piece_ID_color_v1 import *
-import Piece_ID_pixy
-from Piece_ID_pixy import *
-import run_screen
-from run_screen import *
+import Color_ID
+from Color_ID import *
+import Shape_ID
+from Shape_ID import *
+import user_interface
+from user_interface import *
 import serial
 import time
 
