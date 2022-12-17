@@ -15,10 +15,10 @@ import I2C_LCD_driver
 from time import *
 import RPi.GPIO as GPIO
 import time
-import auto_pic_test
-from auto_pic_test import *
-import run_screen
-from run_screen import *
+import auto_pic_capture
+from auto_pic_capture import *
+import user_interface
+from user_interface import *
 
 # Initialize pins on Pi and prep IO communications
 GPIO.setwarnings(False)
